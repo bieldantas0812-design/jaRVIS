@@ -18,15 +18,26 @@ export class JarvisBrain {
   private chat: any;
 
   constructor(apiKey?: string) {
-    if (apiKey && apiKey.length > 10) {
-      this.genAI = new GoogleGenAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      this.chat = this.model.startChat({
-        history: [],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 250 }
-      });
-    } else {
-      console.log("[JARVIS_BRAIN] Inicializado em modo restrito (Sem Gemini Key)");
+    try {
+      if (apiKey && apiKey.length > 10) {
+        // Tenta os dois formatos comuns do SDK Gemini
+        try {
+          this.genAI = new GoogleGenAI(apiKey);
+        } catch (e) {
+          this.genAI = new (GoogleGenAI as any)({ apiKey });
+        }
+
+        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        this.chat = this.model.startChat({
+          history: [],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 250 }
+        });
+        console.log("[JARVIS_BRAIN] Core Neural sincronizado.");
+      } else {
+        console.log("[JARVIS_BRAIN] Modo Local Ativo.");
+      }
+    } catch (err) {
+      console.error("[JARVIS_BRAIN] Erro crítico construtor:", err);
     }
   }
 
