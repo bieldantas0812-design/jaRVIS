@@ -11,7 +11,7 @@ Se você está usando este applet diretamente pelo navegador:
 1. **Ativação da API Key**:
    - Vá no menu de **Secrets** (ícone de chave 🔑 no canto inferior esquerdo ou nas configurações).
    - Adicione um novo segredo com o nome: `GEMINI_API_KEY`.
-   - No valor, cole a chave que você gerou: `.
+   - No valor, cole a chave que você gerou: ``.
 2. **Permissões de Microfone**:
    - Ao clicar no botão de microfone (Ciano), o navegador pedirá permissão. Clique em **Permitir**.
 3. **Reinicialização**:
@@ -36,7 +36,7 @@ Para rodar a interface HUD no seu PC igual está aqui:
 3. **Configure o Ambiente**:
    Crie um arquivo chamado `.env` na raiz e adicione sua chave:
    ```env
-   GEMINI_API_KEY
+   GEMINI_API_KEY=
    ```
 4. **Inicie o Sistema**:
    ```bash

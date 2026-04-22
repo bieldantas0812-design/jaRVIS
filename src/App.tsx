@@ -19,16 +19,28 @@ export default function App() {
     platform: "unknown"
   });
   
+  const [showSettings, setShowSettings] = useState(false);
+  const [assistantName, setAssistantName] = useState("JARVIS");
+  const [userName, setUserName] = useState("Senhor");
+  const [localApiKey, setLocalApiKey] = useState(GEMINI_API_KEY || "");
+  
   const voiceTargetRef = useRef<VoiceEngine | null>(null);
   const brainTargetRef = useRef<JarvisBrain | null>(null);
 
   // Initialize Services
-  useEffect(() => {
-    if (!voiceTargetRef.current) voiceTargetRef.current = new VoiceEngine();
-    if (!brainTargetRef.current && GEMINI_API_KEY) {
-      brainTargetRef.current = new JarvisBrain(GEMINI_API_KEY);
+  const initBrain = useCallback((key: string) => {
+    if (key) {
+      brainTargetRef.current = new JarvisBrain(key);
+      addLog("NÚCLEO NEURAL SINCRONIZADO");
     }
   }, []);
+
+  useEffect(() => {
+    if (!voiceTargetRef.current) voiceTargetRef.current = new VoiceEngine();
+    if (localApiKey && !brainTargetRef.current) {
+      initBrain(localApiKey);
+    }
+  }, [localApiKey, initBrain]);
 
   // Fetch System Stats
   const fetchStats = useCallback(async () => {
@@ -66,8 +78,11 @@ export default function App() {
     }
 
     addLog(`JARVIS: ${response.text}`);
+    // Replace "Senhor" with customized name if present
+    const personalizedText = response.text.replace(/Senhor/g, userName);
+    
     setIsSpeaking(true);
-    voiceTargetRef.current?.speak(response.text, () => {
+    voiceTargetRef.current?.speak(personalizedText, () => {
       setIsSpeaking(false);
     });
   };
@@ -103,26 +118,110 @@ export default function App() {
       {/* Top Header */}
       <div className="flex justify-between items-center mb-8 z-10">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 border border-jarvis-blue/30 rounded flex items-center justify-center text-jarvis-blue shadow-[0_0_15px_rgba(0,229,255,0.2)]">
+          <button 
+            onClick={() => setShowSettings(true)}
+            className="w-10 h-10 border border-jarvis-blue/30 rounded flex items-center justify-center text-jarvis-blue shadow-[0_0_15px_rgba(0,229,255,0.1)] hover:bg-jarvis-blue/10 transition-colors cursor-pointer"
+          >
             <Settings size={20} className="animate-spin-slow" />
-          </div>
+          </button>
           <div>
-            <h1 className="font-display text-xl tracking-widest text-jarvis-blue glow-text">J.A.R.V.I.S.</h1>
+            <h1 className="font-display text-xl tracking-widest text-jarvis-blue glow-text">{assistantName.split('').join('.')}</h1>
             <p className="text-[10px] tracking-[0.3em] opacity-50 uppercase">Neural Network Interface v4.2</p>
           </div>
         </div>
         
         <div className="flex gap-6 font-mono text-[10px]">
           <div className="text-right">
+            <div className="opacity-40">USER IDENTITY</div>
+            <div className="text-jarvis-blue uppercase">{userName}</div>
+          </div>
+          <div className="text-right">
             <div className="opacity-40">LOCAL TIME</div>
             <div className="text-jarvis-blue">{new Date().toLocaleTimeString()}</div>
           </div>
-          <div className="text-right">
-            <div className="opacity-40">UPLINK STATUS</div>
-            <div className="text-green-400">ENCRYPTED</div>
-          </div>
         </div>
       </div>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-jarvis-dark/80 backdrop-blur-xl p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="hud-border w-full max-w-md p-8 rounded-2xl relative overflow-hidden"
+            >
+              <div className="scanline" />
+              <button 
+                onClick={() => setShowSettings(false)}
+                className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+              >
+                <Power size={20} />
+              </button>
+
+              <h2 className="font-display text-jarvis-blue text-lg mb-6 glow-text tracking-widest uppercase">Protocolo de Configuração</h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Identidade do Assistente</label>
+                  <input 
+                    type="text" 
+                    value={assistantName}
+                    onChange={(e) => setAssistantName(e.target.value)}
+                    className="w-full bg-white/5 border border-jarvis-blue/20 rounded py-2 px-3 text-sm font-mono text-jarvis-blue focus:border-jarvis-blue outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Identidade do Usuário</label>
+                  <input 
+                    type="text" 
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="w-full bg-white/5 border border-jarvis-blue/20 rounded py-2 px-3 text-sm font-mono text-jarvis-blue focus:border-jarvis-blue outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Chave de Acesso Neural (Gemini API)</label>
+                  <input 
+                    type="password" 
+                    placeholder="Cole sua chave aqui..."
+                    value={localApiKey}
+                    onChange={(e) => setLocalApiKey(e.target.value)}
+                    className="w-full bg-white/5 border border-jarvis-blue/20 rounded py-2 px-3 text-sm font-mono text-jarvis-blue focus:border-jarvis-blue outline-none"
+                  />
+                  <p className="text-[8px] text-white/20 mt-1">A CHAVE É ARMAZENADA APENAS NA SESSÃO ATUAL</p>
+                </div>
+
+                <div className="pt-4 border-t border-jarvis-blue/10">
+                  <div className="flex items-center justify-between text-[10px] text-white/40 uppercase tracking-widest mb-4">
+                    <span>Modo de Bio-Feedback</span>
+                    <div className="w-8 h-4 bg-jarvis-blue/20 rounded-full relative">
+                      <div className="absolute right-1 top-1 w-2 h-2 bg-jarvis-blue rounded-full shadow-[0_0_10px_var(--color-jarvis-glow)]" />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      initBrain(localApiKey);
+                      setShowSettings(false);
+                    }}
+                    className="w-full py-3 bg-jarvis-blue/10 border border-jarvis-blue/40 text-jarvis-blue font-display text-xs tracking-widest uppercase hover:bg-jarvis-blue/20 transition-all rounded"
+                  >
+                    Sincronizar e Reiniciar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Content Area */}
       <div className="flex-1 grid grid-cols-12 gap-6 z-10 h-full overflow-hidden">
@@ -152,18 +251,18 @@ export default function App() {
             </AnimatePresence>
             
             <div className="flex items-center gap-4 mt-4">
-              {!GEMINI_API_KEY && (
+              {!localApiKey && (
                 <div className="absolute top-20 bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded text-[10px] font-mono">
                   SISTEMA DESATIVADO: CHAVE API NÃO ENCONTRADA
                 </div>
               )}
               <button 
                 onClick={toggleListening}
-                disabled={!GEMINI_API_KEY || isSpeaking}
+                disabled={!localApiKey || isSpeaking}
                 className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_0_20px_rgba(0,229,255,0.1)] active:scale-95 ${
                   isListening 
                     ? "bg-red-500/20 border-red-500 text-red-500 shadow-red-500/40" 
-                    : !GEMINI_API_KEY 
+                    : !localApiKey 
                       ? "opacity-20 cursor-not-allowed border-white/20"
                       : "bg-jarvis-blue/10 border-jarvis-blue/40 text-jarvis-blue hover:bg-jarvis-blue/20"
                 }`}
