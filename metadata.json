@@ -1,0 +1,6 @@
+{
+  "name": "JARVIS System - AI Assistant",
+  "description": "A futuristic virtual assistant with real-time voice interaction, system control simulation, and advanced AI personality.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["AI Assistant", "Voice Recognition", "System Simulation"]
+}
