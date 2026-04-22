@@ -1,4 +1,4 @@
-import { GoogleGenAI, GenerativeModel, ChatSession } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 export interface JarvisResponse {
   text: string;
@@ -11,8 +11,8 @@ export interface JarvisResponse {
 
 export class JarvisBrain {
   private genAI: GoogleGenAI;
-  private model: GenerativeModel;
-  private chat: ChatSession;
+  private model: any;
+  private chat: any;
 
   constructor(apiKey: string) {
     this.genAI = new GoogleGenAI(apiKey);
