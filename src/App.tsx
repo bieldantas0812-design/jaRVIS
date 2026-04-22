@@ -10,8 +10,9 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [logs, setLogs] = useState<string[]>(["SISTEMA JARVIS INICIALIZADO", "AGUARDANDO COMANDOS..."]);
+  const [logs, setLogs] = useState<string[]>(["SISTEMA JARVIS INICIALIZADO", "UTILIZE A ENGRENAGEM PARA ATIVAR"]);
   const [systemStats, setSystemStats] = useState({ 
     cpuLoad: 0, 
     memoryUsage: 0, 
@@ -64,27 +65,39 @@ export default function App() {
   };
 
   const handleBrainResponse = async (input: string) => {
-    if (!brainTargetRef.current) return;
-    
-    addLog(`> ${input}`);
-    const response = await brainTargetRef.current.processInput(input);
-    
-    if (response.command) {
-      addLog(`EXECUTANDO: ${response.command.action}`);
-      // Special logic for search
-      if (response.command.action === "search_web") {
-        window.open(`https://www.google.com/search?q=${encodeURIComponent(response.command.params.query)}`, "_blank");
-      }
+    if (!brainTargetRef.current) {
+      addLog("ERRO: NÚCLEO NEURAL NÃO CARREGADO");
+      return;
     }
-
-    addLog(`JARVIS: ${response.text}`);
-    // Replace "Senhor" with customized name if present
-    const personalizedText = response.text.replace(/Senhor/g, userName);
     
-    setIsSpeaking(true);
-    voiceTargetRef.current?.speak(personalizedText, () => {
-      setIsSpeaking(false);
-    });
+    addLog(`> ENTENDIDO: "${input}"`);
+    setIsThinking(true);
+    
+    try {
+      const response = await brainTargetRef.current.processInput(input);
+      setIsThinking(false);
+      
+      if (response.command) {
+        addLog(`EXECUTANDO: ${response.command.action}`);
+        if (response.command.action === "search_web") {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(response.command.params.query)}`, "_blank");
+        }
+      }
+
+      addLog(`JARVIS: ${response.text}`);
+      
+      // Personalização do nome
+      const personalizedText = response.text.replace(/Senhor/g, userName);
+      
+      setIsSpeaking(true);
+      voiceTargetRef.current?.speak(personalizedText, () => {
+        setIsSpeaking(false);
+      });
+    } catch (error) {
+      setIsThinking(false);
+      addLog("ERRO CRÍTICO NA RESPOSTA");
+      console.error(error);
+    }
   };
 
   const toggleListening = () => {
@@ -272,7 +285,7 @@ export default function App() {
             </div>
             
             <p className="mt-4 text-[10px] text-white/30 tracking-widest uppercase">
-              {isListening ? "Escutando..." : isSpeaking ? "Processando Resposta..." : "Esperando ativação"}
+              {isListening ? "Escutando..." : isThinking ? "Analizando Fluxos de Dados..." : isSpeaking ? "Comunicando Resposta..." : "Esperando ativação"}
             </p>
           </div>
         </div>

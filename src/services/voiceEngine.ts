@@ -46,6 +46,14 @@ export class VoiceEngine {
       onResult(finalTranscript || interimTranscript, finalTranscript !== '');
     };
 
+    this.recognition.onerror = (event: any) => {
+      console.error("Erro no reconhecimento de voz:", event.error);
+      if (event.error === 'not-allowed') {
+        alert("Microfone bloqueado. Por favor, permita o acesso nas configurações do navegador.");
+      }
+      onEnd();
+    };
+
     this.recognition.onend = onEnd;
     this.recognition.start();
   }
