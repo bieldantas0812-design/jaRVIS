@@ -92,15 +92,26 @@ def execute_action(action, params):
         print(f"[ERROR] {str(e)}")
         return False, f"Falha operacional: {str(e)}"
 
+@app.route('/', methods=['GET'])
+def index():
+    return f"JARVIS BRIDGE v8.1 ONLINE - MONITORANDO SISTEMA: {sys.platform.upper()}"
+
 @app.route('/heartbeat', methods=['GET'])
 def heartbeat():
-    return jsonify({"status": "online", "version": "8.0", "voice": VOICE_SUPPORT, "os": sys.platform})
+    return jsonify({
+        "status": "online", 
+        "version": "8.1", 
+        "voice": VOICE_SUPPORT, 
+        "os": sys.platform,
+        "monitor_active": True
+    })
 
 @app.route('/speak', methods=['POST'])
 def handle_speak():
     data = request.json
     text = data.get("text", "")
     if text:
+        print(f"\n[VIGILÂNCIA_VOZ] TRANSMITINDO ÁUDIO: {text}")
         speak_native(text)
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Texto vazio"})
