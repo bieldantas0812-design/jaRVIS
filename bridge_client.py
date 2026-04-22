@@ -91,15 +91,19 @@ def execute_action(action, params):
             prompt, model = params[0], params[1]
             print(f"[BRIDGE_AI] Processando via Ollama: {model}")
             try:
-                # Chama o Ollama local
-                res = subprocess.check_output([
-                    "curl", "-s", "-X", "POST", "http://localhost:11434/api/generate",
-                    "-d", json.dumps({"model": model, "prompt": prompt, "stream": False})
-                ], shell=True)
-                ollama_data = json.loads(res)
-                return True, ollama_data.get("response", "Sem resposta.")
+                import requests
+                response = requests.post(
+                    "http://localhost:11434/api/generate",
+                    json={"model": model, "prompt": prompt, "stream": False},
+                    timeout=20
+                )
+                if response.status_code == 200:
+                    ollama_data = response.json()
+                    return True, ollama_data.get("response", "Sem resposta.")
+                else:
+                    return False, f"Erro Ollama HTTP: {response.status_code}"
             except Exception as e:
-                return False, f"Ollama Local Indisponível: {str(e)}"
+                return False, f"Ollama Local Indisponível (Certifique-se que o Ollama desktop está aberto): {str(e)}"
 
         return False, "Protocolo desconhecido."
     except Exception as e:
