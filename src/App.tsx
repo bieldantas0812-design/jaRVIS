@@ -141,6 +141,10 @@ export default function App() {
       const response = await brainTargetRef.current!.processInput(input, aiMode, ollamaModel);
       setIsThinking(false);
       
+      if (!response || !response.text) {
+        throw new Error("RESPOSTA VAZIA DA IA");
+      }
+      
       if (response.action) {
         addLog(`[INTENT] AUTOMATION -> ${response.action.action}`);
         if (bridgeStatus === 'offline') {
@@ -175,6 +179,12 @@ export default function App() {
       console.error("Critical Brain Failure:", error);
       const msg = error?.message || "ERRO DESCONHECIDO";
       addLog(`!!! FALHA NO PROCESSADOR: ${msg.toUpperCase()}`);
+      
+      // Feedback vocal de erro
+      setIsSpeaking(true);
+      voiceTargetRef.current?.speak(`Senhor, houve um erro no processador neural. Motivo: ${msg.substring(0, 50)}. Por favor, verifique o terminal do servidor.`, () => {
+        setIsSpeaking(false);
+      });
     }
   };
 

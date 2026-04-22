@@ -72,9 +72,19 @@ def handle_execute():
     action = data.get("action")
     params = data.get("params", [])
     
-    print(f"[BRIDGE] Action: {action} Params: {params}")
-    success, message = execute_action(action, params)
-    return jsonify({"success": success, "message": message})
+    print(f"\n[BRIDGE_CMD] REQUISIÇÃO RECEBIDA: {action}")
+    print(f"[BRIDGE_CMD] Parâmetros: {params}")
+    
+    try:
+        success, message = execute_action(action, params)
+        if success:
+            print(f"[BRIDGE_CMD] SUCESSO: {message}")
+        else:
+            print(f"[BRIDGE_CMD] FALHA: {message}")
+        return jsonify({"success": success, "message": message})
+    except Exception as e:
+        print(f"[BRIDGE_CMD] ERRO CRÍTICO NA EXECUÇÃO: {str(e)}")
+        return jsonify({"success": False, "message": f"Erro interno: {str(e)}"})
 
 if __name__ == "__main__":
     app.run(port=5001)

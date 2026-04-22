@@ -9,46 +9,66 @@ async function startServer() {
 
   app.use(express.json());
 
-  // API: System Stats (Uso real de CPU/RAM se possível no Node)
+  // API: System Stats
   app.get("/api/system", (req, res) => {
-    const cpuLoad = Math.round(os.loadavg()[0] * 10); // Simulado/Simplificado para containers
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const memoryUsage = Math.round(((totalMem - freeMem) / totalMem) * 100);
+    try {
+      const cpuLoad = Math.round(os.loadavg()[0] * 10);
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const memoryUsage = Math.round(((totalMem - freeMem) / totalMem) * 100);
 
-    res.json({
-      cpuLoad: cpuLoad > 100 ? 99 : cpuLoad,
-      memoryUsage,
-      uptime: Math.round(os.uptime()),
-      platform: os.platform(),
-      arch: os.arch()
-    });
+      res.json({
+        cpuLoad: cpuLoad > 100 ? 99 : cpuLoad,
+        memoryUsage,
+        uptime: Math.round(os.uptime()),
+        platform: os.platform()
+      });
+    } catch (err) {
+      console.error("[CMD_ERROR] Falha ao coletar métricas de hardware:", err);
+      res.status(500).json({ error: "Erro interno de telemetria" });
+    }
   });
 
-  // Proxy para Ollama Local (Corrigindo latência com timeout e headers)
+  // Proxy para Ollama Local com Logs de CMD
   app.post("/api/ollama", async (req, res) => {
+    const { model, prompt } = req.body;
+    console.log(`\n[CMD_LOG] >>> REQUISIÇÃO OLLAMA RECEBIDA`);
+    console.log(`[CMD_LOG] Modelo: ${model}`);
+    console.log(`[CMD_LOG] Prompt: "${prompt.substring(0, 50)}..."`);
+
     try {
-      const { model, prompt } = req.body;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15s Timeout
+
       const response = await fetch("http://localhost:11434/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: model || "gemma3:4b",
+          model: model || "gemma2",
           prompt: prompt,
-          stream: false,
-          options: {
-            temperature: 0.6,
-            num_ctx: 1024, // Reduz contexto para velocidade
-            top_k: 20
-          }
+          stream: false
         }),
+        signal: controller.signal
       });
-      
-      if (!response.ok) throw new Error("Ollama connection failed");
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        console.error(`[CMD_ERROR] Ollama respondeu com erro HTTP: ${response.status}`);
+        return res.status(response.status).json({ error: `Erro no Ollama: ${response.statusText}` });
+      }
+
       const data = await response.json();
+      console.log(`[CMD_LOG] <<< OLLAMA RESPONDEU COM SUCESSO (${data.response.length} chars)`);
       res.json({ text: data.response });
-    } catch (error) {
-      res.status(503).json({ error: "Ollama não detectado em localhost:11434" });
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.error("[CMD_ERROR] Timeout: O Ollama local está demorando demais para responder.");
+        res.status(504).json({ error: "Timeout do Ollama" });
+      } else {
+        console.error("[CMD_ERROR] Falha crítica de conexão com Ollama (localhost:11434). O serviço está rodando?");
+        res.status(503).json({ error: "Ollama offline ou inacessível" });
+      }
     }
   });
 
