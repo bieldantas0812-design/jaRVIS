@@ -24,6 +24,8 @@ export default function App() {
   const [assistantName, setAssistantName] = useState("JARVIS");
   const [userName, setUserName] = useState("Senhor");
   const [localApiKey, setLocalApiKey] = useState(GEMINI_API_KEY || "");
+  const [aiMode, setAiMode] = useState<'gemini' | 'ollama'>('gemini');
+  const [ollamaModel, setOllamaModel] = useState("llama3");
   
   const voiceTargetRef = useRef<VoiceEngine | null>(null);
   const brainTargetRef = useRef<JarvisBrain | null>(null);
@@ -74,7 +76,7 @@ export default function App() {
     setIsThinking(true);
     
     try {
-      const response = await brainTargetRef.current.processInput(input);
+      const response = await brainTargetRef.current.processInput(input, aiMode, ollamaModel);
       setIsThinking(false);
       
       if (response.command) {
@@ -202,16 +204,46 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Chave de Acesso Neural (Gemini API)</label>
-                  <input 
-                    type="password" 
-                    placeholder="Cole sua chave aqui..."
-                    value={localApiKey}
-                    onChange={(e) => setLocalApiKey(e.target.value)}
-                    className="w-full bg-white/5 border border-jarvis-blue/20 rounded py-2 px-3 text-sm font-mono text-jarvis-blue focus:border-jarvis-blue outline-none"
-                  />
-                  <p className="text-[8px] text-white/20 mt-1">A CHAVE É ARMAZENADA APENAS NA SESSÃO ATUAL</p>
+                  <label className="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Processamento de IA</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => setAiMode('gemini')}
+                      className={`py-2 text-[10px] border transition-all ${aiMode === 'gemini' ? 'bg-jarvis-blue/20 border-jarvis-blue text-jarvis-blue' : 'border-white/10 text-white/40'}`}
+                    >
+                      GEMINI (NUVEM)
+                    </button>
+                    <button 
+                      onClick={() => setAiMode('ollama')}
+                      className={`py-2 text-[10px] border transition-all ${aiMode === 'ollama' ? 'bg-jarvis-blue/20 border-jarvis-blue text-jarvis-blue' : 'border-white/10 text-white/40'}`}
+                    >
+                      OLLAMA (LOCAL)
+                    </button>
+                  </div>
                 </div>
+
+                {aiMode === 'gemini' ? (
+                  <div>
+                    <label className="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Chave de Acesso Neural (Gemini API)</label>
+                    <input 
+                      type="password" 
+                      placeholder="Cole sua chave aqui..."
+                      value={localApiKey}
+                      onChange={(e) => setLocalApiKey(e.target.value)}
+                      className="w-full bg-white/5 border border-jarvis-blue/20 rounded py-2 px-3 text-sm font-mono text-jarvis-blue focus:border-jarvis-blue outline-none"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[10px] text-white/40 uppercase tracking-widest mb-2">Modelo Ollama Local</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: llama3, mistral..."
+                      value={ollamaModel}
+                      onChange={(e) => setOllamaModel(e.target.value)}
+                      className="w-full bg-white/5 border border-jarvis-blue/20 rounded py-2 px-3 text-sm font-mono text-jarvis-blue focus:border-jarvis-blue outline-none"
+                    />
+                  </div>
+                )}
 
                 <div className="pt-4 border-t border-jarvis-blue/10">
                   <div className="flex items-center justify-between text-[10px] text-white/40 uppercase tracking-widest mb-4">
@@ -264,18 +296,18 @@ export default function App() {
             </AnimatePresence>
             
             <div className="flex items-center gap-4 mt-4">
-              {!localApiKey && (
+              {(!localApiKey && aiMode === 'gemini') && (
                 <div className="absolute top-20 bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded text-[10px] font-mono">
                   SISTEMA DESATIVADO: CHAVE API NÃO ENCONTRADA
                 </div>
               )}
               <button 
                 onClick={toggleListening}
-                disabled={!localApiKey || isSpeaking}
+                disabled={(aiMode === 'gemini' && !localApiKey) || isSpeaking}
                 className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 border shadow-[0_0_20px_rgba(0,229,255,0.1)] active:scale-95 ${
                   isListening 
                     ? "bg-red-500/20 border-red-500 text-red-500 shadow-red-500/40" 
-                    : !localApiKey 
+                    : (aiMode === 'gemini' && !localApiKey) 
                       ? "opacity-20 cursor-not-allowed border-white/20"
                       : "bg-jarvis-blue/10 border-jarvis-blue/40 text-jarvis-blue hover:bg-jarvis-blue/20"
                 }`}

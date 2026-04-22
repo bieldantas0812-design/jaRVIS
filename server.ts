@@ -19,6 +19,25 @@ async function startServer() {
     });
   });
 
+  // Proxy para Ollama Local
+  app.post("/api/ollama", express.json(), async (req, res) => {
+    try {
+      const { model, prompt } = req.body;
+      const response = await fetch("http://localhost:11434/api/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          model: model || "llama3",
+          prompt: prompt,
+          stream: false
+        })
+      });
+      const data = await response.json();
+      res.json({ text: data.response });
+    } catch (error) {
+      res.status(500).json({ error: "Ollama não encontrado. Verifique se ele está rodando em localhost:11434" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

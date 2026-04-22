@@ -46,7 +46,22 @@ export class JarvisBrain {
     });
   }
 
-  async processInput(input: string): Promise<JarvisResponse> {
+  async processInput(input: string, mode: 'gemini' | 'ollama' = 'gemini', model?: string): Promise<JarvisResponse> {
+    if (mode === 'ollama') {
+      try {
+        const response = await fetch("/api/ollama", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: `Responda como o assistente JARVIS: ${input}`, model: model || 'llama3' })
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        return { text: data.text };
+      } catch (error) {
+        return { text: "Senhor, não consegui conexão com o servidor Ollama local. Certifique-se de que ele está ativo." };
+      }
+    }
+
     try {
       const result = await this.chat.sendMessage(input);
       const text = result.text;
