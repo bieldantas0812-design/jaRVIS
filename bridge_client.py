@@ -87,6 +87,20 @@ def execute_action(action, params):
             pyautogui.screenshot(f"capture_{int(time.time())}.png")
             return True, "Registro visual capturado."
 
+        elif action == "ollama_proxy":
+            prompt, model = params[0], params[1]
+            print(f"[BRIDGE_AI] Processando via Ollama: {model}")
+            try:
+                # Chama o Ollama local
+                res = subprocess.check_output([
+                    "curl", "-s", "-X", "POST", "http://localhost:11434/api/generate",
+                    "-d", json.dumps({"model": model, "prompt": prompt, "stream": False})
+                ], shell=True)
+                ollama_data = json.loads(res)
+                return True, ollama_data.get("response", "Sem resposta.")
+            except Exception as e:
+                return False, f"Ollama Local Indisponível: {str(e)}"
+
         return False, "Protocolo desconhecido."
     except Exception as e:
         print(f"[ERROR] {str(e)}")
@@ -125,6 +139,10 @@ def handle_execute():
     print(f"\n[BRIDGE_CMD] REQUISIÇÃO RECEBIDA: {action}")
     try:
         success, message = execute_action(action, params)
+        # Se for proxy do ollama, o 'message' contém o texto da IA
+        if action == "ollama_proxy":
+            return jsonify({"success": success, "response": message if success else None, "message": "AI Processada" if success else message})
+
         return jsonify({"success": success, "message": message})
     except Exception as e:
         return jsonify({"success": False, "message": f"Erro interno: {str(e)}"})

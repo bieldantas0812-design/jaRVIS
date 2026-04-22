@@ -83,28 +83,34 @@ export class JarvisBrain {
 
   private async processLocal(input: string, model: string = 'gemma3:4b'): Promise<JarvisResponse> {
     try {
-      const res = await fetch("/api/ollama", {
+      // NOVO PROTOCOLO: O Frontend fala com a Ponte Local (Bridge), que por sua vez fala com o Ollama.
+      // Isso evita erros de proxy na nuvem.
+      const bridgeRes = await fetch("http://localhost:5001/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: input, model })
+        body: JSON.stringify({ 
+          action: "ollama_proxy", 
+          params: [input, model] 
+        })
       });
       
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || `HTTP ${res.status}`);
+      if (!bridgeRes.ok) {
+        throw new Error("Ponte local não respondeu ao processamento AI");
       }
       
-      const data = await res.json();
-      const action = this.extractAction(data.text);
+      const data = await bridgeRes.json();
+      if (!data.success) throw new Error(data.message || "Falha na ponte AI");
+
+      const action = this.extractAction(data.response);
       
       return {
-        text: data.text,
+        text: data.response,
         action: action,
         intent: action ? 'automation' : 'chat'
       };
     } catch (error: any) {
       console.error("[LOCAL_PROCESS] Fault:", error);
-      throw new Error(`Conexão Ollama: ${error.message}`);
+      throw new Error(`Conexão com Ollama via Bridge: ${error.message}. Certifique-se que a Bridge v8.1 está rodando.`);
     }
   }
 
