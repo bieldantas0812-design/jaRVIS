@@ -1,54 +1,114 @@
-# JARVIS System - Virtual Assistant
+# 🤖 J.A.R.V.I.S. - Tutorial Completo de Instalação
 
-Um assistente virtual futurista inspirado no JARVIS do Homem de Ferro, construído com React, Node.js e Gemini AI.
-
-## Funcionalidades
-- **Reconhecimento de Voz**: Compreensão de fala em Português (PT-BR) em tempo real.
-- **Resposta por Voz**: Respostas narradas com síntese de voz natural.
-- **Cérebro IA**: Integrado com Google Gemini 2.0 para uma personalidade elegante e inteligente.
-- **Interface HUD**: Design futurista com animações suaves e monitoramento de sistema.
-- **Simulação de Controle**: Detecção de intenções para buscas na web, notas e status do sistema.
-
-## Estrutura do Projeto (Web/Node)
-- `/src/services/jarvisBrain.ts`: Lógica de IA e processamento de linguagem.
-- `/src/services/voiceEngine.ts`: Integração com Browser Speech APIs.
-- `/server.ts`: Backend Express para monitoramento de recursos do servidor.
-- `/src/components/JarvisUI.tsx`: Componentes visuais da interface HUD.
+Bem-vindo ao protocolo de inicialização do sistema JARVIS. Siga as instruções abaixo para configurar o assistente no seu ambiente.
 
 ---
 
-## Sugestão de Arquitetura Desktop (Windows/Python)
-Para converter este projeto em um assistente local para Windows com controle total de arquivos e programas, siga esta estrutura modular recomendada em Python:
+## 1. Configuração no Google AI Studio (Nuvem)
 
-### Estrutura de Pastas
+Se você está usando este applet diretamente pelo navegador:
+
+1. **Ativação da API Key**:
+   - Vá no menu de **Secrets** (ícone de chave 🔑 no canto inferior esquerdo ou nas configurações).
+   - Adicione um novo segredo com o nome: `GEMINI_API_KEY`.
+   - No valor, cole a chave que você gerou: `.
+2. **Permissões de Microfone**:
+   - Ao clicar no botão de microfone (Ciano), o navegador pedirá permissão. Clique em **Permitir**.
+3. **Reinicialização**:
+   - Se o sistema indicar "Chave não encontrada", recarregue a página após salvar o Secret.
+
+---
+
+## 2. Instalação Local (Node.js/Web HUD)
+
+Para rodar a interface HUD no seu PC igual está aqui:
+
+### Pré-requisitos
+- [Node.js](https://nodejs.org/) instalado (Versão 18 ou superior).
+
+### Passo a Passo
+1. **Baixe o Código**: Faça o download do ZIP do projeto ou clone o repositório.
+2. **Instale as Dependências**:
+   No terminal da pasta do projeto, digite:
+   ```bash
+   npm install
+   ```
+3. **Configure o Ambiente**:
+   Crie um arquivo chamado `.env` na raiz e adicione sua chave:
+   ```env
+   GEMINI_API_KEY
+   ```
+4. **Inicie o Sistema**:
+   ```bash
+   npm run dev
+   ```
+5. **Acesse**: Abra `http://localhost:3000` no seu navegador (Chrome recomendado para Speech API).
+
+---
+
+## 3. Guia de Implementação Python (Controle Total do Windows)
+
+Como solicitado, aqui está o tutorial para criar a ponte que controla o Windows de verdade (arquivos, mouse, teclado), usando o código fornecido como cérebro:
+
+### Passo 1: Instale o Python no seu PC
+[Download Python 3.10+](https://www.python.org/)
+
+### Passo 2: Instale as bibliotecas necessárias
+Abra o CMD/PowerShell e digite:
+```bash
+pip install google-generativeai SpeechRecognition pyttsx3 pyautogui flask flask-cors
 ```
-jarvis_desktop/
-├── main.py                  # Ponto de entrada
-├── speech_to_text/          # Módulo vosc ou whisper
-│   └── recognizer.py
-├── text_to_speech/          # Módulo pyttsx3 ou gTTS
-│   └── speaker.py
-├── ai_brain/                # Integração Gemini/Google GenAI
-│   └── chat_engine.py
-├── command_executor/        # Lógica de automação
-│   ├── app_control.py       # Abrir/fechar apps
-│   ├── system_control.py    # Volume, brilho, energia
-│   └── web_control.py       # Browse, search
-├── ui/                      # Interface (CustomTkinter ou PySide6)
-│   └── dashboard.py
-├── config/                  # Configurações locais (YAML/JSON)
-└── utils/                   # Logs e Helpers
+
+### Passo 3: O Script de Automação (JarvisBridge.py)
+Você pode usar o código abaixo para criar um backend Python que executa os comandos que o Jarvis envia:
+
+```python
+import pyautogui
+import os
+import pyttsx3
+import speech_recognition as sr
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+engine = pyttsx3.init()
+
+@app.route('/execute', methods=['POST'])
+def execute():
+    data = request.json
+    command = data.get('action')
+    params = data.get('params', {})
+
+    if command == 'open_app':
+        os.system(f"start {params.get('name')}")
+    elif command == 'search_web':
+        os.system(f"start https://www.google.com/search?q={params.get('query')}")
+    elif command == 'control_volume':
+        # Exemplo simplificado usando atalhos de teclado
+        for _ in range(5): pyautogui.press('volumeup')
+        
+    return jsonify({"status": "executed"})
+
+if __name__ == '__main__':
+    app.run(port=5000)
 ```
 
-### Principais Bibliotecas Python Sugetidas:
-- `google-generativeai`: Para o cérebro do Jarvis.
-- `SpeechRecognition`: Para capturar áudio.
-- `pyttsx3`: Para fala offline ou `Edge-TTS` para fala online premium.
-- `pyautogui`: Para controle de mouse e teclado.
-- `win32gui` / `subprocess`: Para gerenciar janelas e processos do Windows.
+---
 
-## Como usar este projeto
-1. Ative o microfone no navegador.
-2. Clique no ícone de microfone.
-3. Fale comandos como "Como está o sistema?" ou "Jarvis, pesquise sobre buracos negros".
-4. Ouça a resposta elegante do JARVIS.
+## 4. Comandos Prontos para Testar
+
+Tente falar estas frases logo após ativar o microfone:
+
+- **"Jarvis, você está aí?"** -> (Teste de conversa e personalidade)
+- **"Como está o uso de memória do meu computador?"** -> (Teste de leitura de sensores)
+- **"Jarvis, pesquise no Google sobre a velocidade da luz."** -> (Teste de automação web)
+- **"Me conte uma piada inteligente, senhor Stark."** -> (Teste de contexto)
+
+---
+
+## 5. Dicas de Melhoria
+
+- **Voz Premium**: No Windows Local, instale as vozes da Microsoft em Português (Ex: Maria ou Daniel) para uma fala mais fluida.
+- **Microfone**: Use um microfone dedicado e evite ruídos no ambiente para que o reconhecimento de voz seja 100% preciso.
+- **Modo Sempre Ouvindo**: No código `App.tsx`, você pode alterar a função `onEnd` do serviço de voz para reiniciar a escuta automaticamente, criando o modo contínuo.
