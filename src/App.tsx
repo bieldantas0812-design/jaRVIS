@@ -14,6 +14,7 @@ export default function App() {
   const [transcript, setTranscript] = useState("");
   const [logs, setLogs] = useState<string[]>(["SYSTEM MARK VII ONLINE", "NEURAL LINK ESTABLISHED"]);
   const [volume, setVolume] = useState(0);
+  const [bridgeStatus, setBridgeStatus] = useState<'online' | 'offline'>('offline');
   const [systemStats, setSystemStats] = useState({ cpuLoad: 0, memoryUsage: 0, uptime: 0, platform: "windows" });
   
   const [showSettings, setShowSettings] = useState(false);
@@ -85,6 +86,23 @@ export default function App() {
     startVisualizer();
   }, []);
 
+  // Heartbeat check for Bridge
+  const checkBridge = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:5001/heartbeat");
+      if (res.ok) setBridgeStatus('online');
+      else setBridgeStatus('offline');
+    } catch {
+      setBridgeStatus('offline');
+    }
+  }, []);
+
+  useEffect(() => {
+    checkBridge();
+    const timer = setInterval(checkBridge, 10000);
+    return () => clearInterval(timer);
+  }, [checkBridge]);
+
   // Fetch System Stats
   const fetchStats = useCallback(async () => {
     try {
@@ -103,34 +121,44 @@ export default function App() {
   }, [fetchStats]);
 
   const handleBrainResponse = async (input: string) => {
-    if (!brainTargetRef.current && aiMode === 'gemini') {
-      addLog("ERRO: NÚCLEO NEURAL NÃO CARREGADO");
-      return;
+    if (!brainTargetRef.current) {
+        if (aiMode === 'gemini' && !localApiKey) {
+            addLog("ERRO: CHAVE API AUSENTE");
+            return;
+        }
     }
     
-    addLog(`> ENTENDIDO: "${input}"`);
+    addLog(`> AUDIO_IN: "${input}"`);
     setIsThinking(true);
     
     try {
       const response = await brainTargetRef.current!.processInput(input, aiMode, ollamaModel);
       setIsThinking(false);
       
-      if (response.command) {
-        addLog(`EXECUTANDO PROTOCOLO: ${response.command.action}`);
-        // Send to locally running python bridge
-        try {
-          await fetch("http://localhost:5001/execute", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(response.command)
-          });
-        } catch (e) {
-          addLog("ERRO: BRIDGE DE AUTOMAÇÃO NÃO DETECTADA");
+      if (response.action) {
+        addLog(`[INTENT] AUTOMATION -> ${response.action.action}`);
+        if (bridgeStatus === 'offline') {
+           addLog("!!! ERRO: BRIDGE NATIVA DESCONECTADA");
+        } else {
+          try {
+            const bridgeRes = await fetch("http://localhost:5001/execute", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(response.action)
+            });
+            const bridgeData = await bridgeRes.json();
+            addLog(`[BRIDGE] ${bridgeData.message}`);
+          } catch (e) {
+            addLog("!!! FALHA NA COMUNICAÇÃO COM A PONTE");
+          }
         }
       }
 
-      addLog(`JARVIS: ${response.text}`);
-      const personalizedText = response.text.replace(/Senhor/g, userName);
+      // Limpa texto para o TTS
+      const cleanText = brainTargetRef.current!.cleanTextForSpeech(response.text);
+      addLog(`JARVIS: ${cleanText}`);
+      
+      const personalizedText = cleanText.replace(/Senhor/g, userName);
       
       setIsSpeaking(true);
       voiceTargetRef.current?.speak(personalizedText, () => {
@@ -138,7 +166,7 @@ export default function App() {
       });
     } catch (error) {
       setIsThinking(false);
-      addLog("FALHA CRÍTICA NO PROCESSAMENTO");
+      addLog("!!! FALHA CRÍTICA NO PROCESSADOR");
     }
   };
 
@@ -263,15 +291,20 @@ export default function App() {
 
             <div className="mt-8 flex flex-col items-center">
               <span className="technical-label tracking-[0.4em] mb-2">{isListening ? "Capturando Ondas Sonoras" : isThinking ? "Decodificando Intent" : isSpeaking ? "Sincronizando Resposta" : "Núcleo em Espera"}</span>
-              <div className="flex gap-1">
-                {[...Array(3)].map((_, i) => (
-                  <motion.div 
-                    key={i}
-                    className={`w-1 h-1 rounded-full ${isThinking || isSpeaking || isListening ? 'bg-jarvis-accent' : 'bg-white/10'}`}
-                    animate={(isThinking || isSpeaking || isListening) ? { opacity: [0.3, 1, 0.3] } : {}}
-                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
-                  />
-                ))}
+              <div className="flex gap-4 items-center mt-2">
+                <div className="flex gap-1">
+                  {[...Array(3)].map((_, i) => (
+                    <motion.div 
+                      key={i}
+                      className={`w-1 h-1 rounded-full ${isThinking || isSpeaking || isListening ? 'bg-jarvis-accent' : 'bg-white/10'}`}
+                      animate={(isThinking || isSpeaking || isListening) ? { opacity: [0.3, 1, 0.3] } : {}}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
+                    />
+                  ))}
+                </div>
+                <div className={`text-[8px] font-mono tracking-widest ${bridgeStatus === 'online' ? 'text-green-500' : 'text-red-500/50'}`}>
+                  BRIDGE: {bridgeStatus.toUpperCase()}
+                </div>
               </div>
             </div>
           </div>

@@ -12,70 +12,69 @@ from flask_cors import CORS
 
 # Configurações de Segurança do PyAutoGUI
 pyautogui.FAILSAFE = True
-pyautogui.PAUSE = 0.5
+pyautogui.PAUSE = 0.3
 
 app = Flask(__name__)
-CORS(app)  # Permite requisições do frontend web
+CORS(app)
 
-print("=== JARVIS AUTOMATION BRIDGE v7.0 ===")
-print("Status: Inicializando módulos nativos do Windows...")
+print("=== JARVIS AUTOMATION BRIDGE v7.5 ===")
 
 def execute_action(action, params):
     try:
         if action == "open_app":
-            app_name = params.get("query", "")
-            print(f"Executando: Abrindo {app_name}")
-            # Tenta abrir via comando de sistema ou atalho
-            os.system(f"start {app_name}")
-            return True, f"Abrindo {app_name}, senhor."
+            app_query = params[0] if params else ""
+            print(f"[BRIDGE] Opening: {app_query}")
+            # Tenta via shell para maior compatibilidade no Windows
+            subprocess.Popen(["start", "", app_query], shell=True)
+            return True, f"Iniciando {app_query}."
 
         elif action == "search_web":
-            query = params.get("query", "")
-            url = f"https://www.google.com/search?q={query}"
-            webbrowser.open(url)
-            return True, f"Pesquisando '{query}' no navegador."
+            query = params[0] if params else ""
+            webbrowser.open(f"https://www.google.com/search?q={query}")
+            return True, f"Pesquisando {query}."
 
         elif action == "type_text":
-            text = params.get("query", "")
+            text = params[0] if params else ""
             pyautogui.write(text, interval=0.01)
-            return True, "Texto inserido."
+            return True, "Transcrição concluída."
+
+        elif action == "press_key":
+            key = params[0] if params else "enter"
+            pyautogui.press(key)
+            return True, f"Tecla {key} enviada."
+
+        elif action == "move_mouse":
+            x, y = int(params[0]), int(params[1])
+            pyautogui.moveTo(x, y, duration=0.2)
+            return True, "Movimento concluído."
 
         elif action == "click":
-            pyautogui.click()
+            button = params[0] if params else "left"
+            pyautogui.click(button=button)
             return True, "Clique executado."
 
         elif action == "screenshot":
-            path = f"screenshot_{int(time.time())}.png"
-            pyautogui.screenshot(path)
-            return True, f"Captura de tela salva como {path}"
+            pyautogui.screenshot(f"capture_{int(time.time())}.png")
+            return True, "Registro visual capturado."
 
-        elif action == "lock_pc":
-            os.system("rundll32.exe user32.dll,LockWorkStation")
-            return True, "Computador bloqueado."
-
-        elif action == "set_volume":
-            # Exemplo simplificado usando CMD (nircmd é recomendado para controle fino)
-            # Aqui simulamos teclas de volume
-            level = params.get("level", 5)
-            for _ in range(level):
-                pyautogui.press("volumeup")
-            return True, "Volume ajustado."
-
-        return False, "Ação não mapeada no protocolo."
+        return False, "Protocolo desconhecido."
     except Exception as e:
-        return False, str(e)
+        print(f"[ERROR] {str(e)}")
+        return False, f"Falha operacional: {str(e)}"
+
+@app.route('/heartbeat', methods=['GET'])
+def heartbeat():
+    return jsonify({"status": "online", "version": "7.5", "os": sys.platform})
 
 @app.route('/execute', methods=['POST'])
 def handle_execute():
     data = request.json
     action = data.get("action")
-    params = data.get("params", {})
+    params = data.get("params", [])
     
+    print(f"[BRIDGE] Action: {action} Params: {params}")
     success, message = execute_action(action, params)
     return jsonify({"success": success, "message": message})
 
 if __name__ == "__main__":
-    print("Link Neural: ATIVO")
-    print("Aguardando comandos na porta 5001...")
-    # Roda em porta diferente do Jarvis Core para evitar conflitos
     app.run(port=5001)
