@@ -66,24 +66,20 @@ export class JarvisBrain {
       const result = await this.chat.sendMessage(input);
       const text = result.text;
       
-      // Basic command parsing from text
-      // In a real scenario, we might use Function Calling, but for this demo 
-      // we'll parse the text for patterns or use a secondary JSON extraction pass if needed.
-      // Let's try to detect simple patterns in the response.
       let command = undefined;
-      
       const lowerInput = input.toLowerCase();
       if (lowerInput.includes("status do sistema") || lowerInput.includes("como está o pc")) {
         command = { action: "show_system_stats", params: {} };
       } else if (lowerInput.includes("pesquise") || lowerInput.includes("procure por")) {
-        const query = input.replace(/pesquise|procure por/gi, "").trim();
+        const query = input.replace(/pesquise|procure por|jarvis/gi, "").trim();
         command = { action: "search_web", params: { query } };
       }
 
-      return { text: text || "Desculpe, senhor. Tive um erro de processamento.", command };
-    } catch (error) {
+      return { text: text || "Resposta vazia recebida.", command };
+    } catch (error: any) {
       console.error("Jarvis Brain Error:", error);
-      return { text: "Senhor, detectei uma falha nos meus sistemas neurais." };
+      const errorMsg = error?.message || "Erro desconhecido";
+      return { text: `Senhor, detectei uma falha nos meus sistemas neurais. Identificador: ${errorMsg}` };
     }
   }
 }

@@ -81,17 +81,18 @@ export function CommandLog({ logs }: { logs: string[] }) {
   );
 }
 
-export function VoiceAvatar({ isSpeaking, isListening }: { isSpeaking: boolean, isListening: boolean }) {
+export function VoiceAvatar({ isSpeaking, isListening, volume = 0 }: { isSpeaking: boolean, isListening: boolean, volume?: number }) {
+  const pulseScale = isListening ? 1 + (volume / 255) : 1;
+  
   return (
     <div className="relative w-48 h-48 flex items-center justify-center">
-      {/* Outer Rotating Ring */}
+      {/* ... rings ... */}
       <motion.div 
         className="absolute inset-0 border-2 border-jarvis-blue/10 rounded-full"
         animate={{ rotate: 360 }}
         transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
       />
       
-      {/* Dashed Ring */}
       <motion.div 
         className="absolute inset-4 border border-dashed border-jarvis-blue/30 rounded-full"
         animate={{ rotate: -360 }}
@@ -102,17 +103,16 @@ export function VoiceAvatar({ isSpeaking, isListening }: { isSpeaking: boolean, 
       <motion.div 
         className={`w-24 h-24 rounded-full flex items-center justify-center relative overflow-hidden bg-jarvis-blue/5 border border-jarvis-blue/20`}
         animate={{ 
-          scale: isSpeaking ? [1, 1.1, 1] : 1,
-          boxShadow: isSpeaking ? "0 0 30px var(--color-jarvis-glow)" : "0 0 10px rgba(0,229,255,0.1)"
+          scale: isSpeaking ? [1, 1.1, 1] : pulseScale,
+          boxShadow: (isSpeaking || (isListening && volume > 20)) ? "0 0 30px var(--color-jarvis-glow)" : "0 0 10px rgba(0,229,255,0.1)"
         }}
-        transition={{ duration: 0.5, repeat: isSpeaking ? Infinity : 0 }}
+        transition={{ duration: 0.1 }}
       >
-        {/* Pulse inner ring */}
         {isListening && (
           <motion.div 
-            className="absolute inset-0 border-4 border-jarvis-blue/40 rounded-full"
-            animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-            transition={{ duration: 1, repeat: Infinity }}
+            className="absolute inset-0 border-2 border-jarvis-blue/20 rounded-full"
+            animate={{ scale: [1, 2], opacity: [0.3, 0] }}
+            transition={{ duration: 0.8, repeat: Infinity }}
           />
         )}
         
