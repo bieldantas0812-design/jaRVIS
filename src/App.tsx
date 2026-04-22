@@ -171,9 +171,24 @@ export default function App() {
       const personalizedText = cleanText.replace(/Senhor/g, userName);
       
       setIsSpeaking(true);
-      voiceTargetRef.current?.speak(personalizedText, () => {
-        setIsSpeaking(false);
-      });
+
+      // NOVO PROTOCOLO: Se a ponte estiver online, usa Voz Nativa (Sem bugs de navegador)
+      if (bridgeStatus === 'online') {
+        try {
+          await fetch("http://localhost:5001/speak", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: personalizedText })
+          });
+          // Simulamos o fim da fala para a animação do avatar, já que a ponte é assíncrona
+          setTimeout(() => setIsSpeaking(false), 2000 + (personalizedText.length * 50));
+        } catch (e) {
+          // Fallback para navegador se a ponte falhar no áudio
+          voiceTargetRef.current?.speak(personalizedText, () => setIsSpeaking(false));
+        }
+      } else {
+        voiceTargetRef.current?.speak(personalizedText, () => setIsSpeaking(false));
+      }
     } catch (error: any) {
       setIsThinking(false);
       console.error("Critical Brain Failure:", error);
