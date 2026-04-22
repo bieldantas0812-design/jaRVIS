@@ -1,27 +1,4 @@
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
-
-const SYSTEM_PROMPT = `
-Você é o JARVIS (Just A Rather Very Intelligent System), um assistente virtual elegante, inteligente e refinado.
-Sua personalidade é inspirada no assistente de Tony Stark: oficial, prestativo, com um leve toque de sarcasmo britânico ocasional, mas sempre focado na eficiência.
-
-DIRETRIZES:
-1. Responda em Português do Brasil de forma natural.
-2. Seja direto e informativo.
-3. Se o usuário der um comando que você pode executar (identificado por nomes de funções), confirme a execução.
-4. Mantenha o contexto da conversa.
-5. Quando o usuário perguntar algo que exija ação no sistema, tente identificar a intenção.
-
-FUNÇÕES DISPONÍVEIS (Identifique-as no seu raciocínio):
-- open_app(name): Abrir um aplicativo.
-- close_app(name): Fechar um aplicativo.
-- control_volume(level): Ajustar volume (0-100).
-- show_system_stats(): Mostrar status do sistema.
-- search_web(query): Pesquisar na internet.
-- create_note(text): Salvar uma nota.
-- take_screenshot(): Capturar tela.
-
-Se você detectar uma intenção de comando, responda confirmando a ação de forma elegante (ex: "Certamente, senhor. Iniciando o protocolo de pesquisa.").
-`;
+import { GoogleGenAI, GenerativeModel, ChatSession } from "@google/genai";
 
 export interface JarvisResponse {
   text: string;
@@ -29,57 +6,124 @@ export interface JarvisResponse {
     action: string;
     params: any;
   };
+  intent: 'chat' | 'automation' | 'search' | 'system';
 }
 
 export class JarvisBrain {
-  private ai: GoogleGenAI;
-  private chat: any;
+  private genAI: GoogleGenAI;
+  private model: GenerativeModel;
+  private chat: ChatSession;
 
   constructor(apiKey: string) {
-    this.ai = new GoogleGenAI({ apiKey });
-    this.chat = this.ai.chats.create({
-      model: "gemini-3-flash-preview",
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-      }
+    this.genAI = new GoogleGenAI(apiKey);
+    this.model = this.genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash",
+      systemInstruction: `Você é o JARVIS (Just A Rather Very Intelligent System). 
+      Sua personalidade: Altamente sofisticado, eficiente, direto, levemente sarcástico/britânico e focado em produtividade.
+      Seu objetivo: Assistir o usuário no Windows.
+      
+      CLASSIFICAÇÃO DE INTENÇÃO:
+      - Se o usuário pedir para abrir algo, clicar, digitar, fechar ou mexer no pc, use INTENT: automation.
+      - Se for uma pergunta geral, use INTENT: chat.
+      - Se pedir para pesquisar algo na internet, use INTENT: search.
+      
+      FORMATO DE RESPOSTA (Obrigatório):
+      Responda de forma natural, mas internamente identifique se é um comando.
+      Ao detectar um comando, use palavras chave como [EXECUTE: action_name(params)].
+      Ações disponíveis: 
+      - open_app(name)
+      - close_app(name)
+      - type_text(content)
+      - press_key(key)
+      - move_mouse(x, y)
+      - click(button)
+      - search_web(query)
+      - screenshot()
+      - set_volume(level)
+      - shutdown()
+      - lock_pc()
+
+      Responda sempre em Português do Brasil de forma elegante.`
+    });
+    this.chat = this.model.startChat({
+      history: [],
+      generationConfig: {
+        maxOutputTokens: 200,
+        temperature: 0.7,
+      },
     });
   }
 
-  async processInput(input: string, mode: 'gemini' | 'ollama' = 'gemini', model?: string): Promise<JarvisResponse> {
+  async processInput(input: string, mode: 'gemini' | 'ollama' = 'gemini', modelName?: string): Promise<JarvisResponse> {
     if (mode === 'ollama') {
       try {
         const response = await fetch("/api/ollama", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: `Responda como o assistente JARVIS: ${input}`, model: model || 'llama3' })
+          body: JSON.stringify({ 
+            prompt: `### JARVIS CORE SYSTEM
+            User Request: ${input}
+            Instructions: Identify if this is a system command or chat. Respond briefly and elegantly in PT-BR.
+            If command, include [EXECUTE: action(params)].
+            Models available tools: open_app, search_web, type_text, click.`, 
+            model: modelName || 'gemma3:4b' 
+          })
         });
         const data = await response.json();
         if (data.error) throw new Error(data.error);
-        return { text: data.text };
+
+        const text = data.text;
+        const command = this.extractCommand(text);
+        return { 
+          text: text.replace(/\[EXECUTE:.*\]/g, '').trim(), 
+          command,
+          intent: command ? 'automation' : 'chat'
+        };
       } catch (error) {
-        return { text: "Senhor, não consegui conexão com o servidor Ollama local. Certifique-se de que ele está ativo." };
+        return { text: "Senhor, falha na conexão com o motor Ollama local.", intent: 'system' };
       }
     }
 
     try {
       const result = await this.chat.sendMessage(input);
-      const text = result.text;
+      const text = result.response.text();
+      const command = this.extractCommand(text);
       
-      let command = undefined;
-      const lowerInput = input.toLowerCase();
-      if (lowerInput.includes("status do sistema") || lowerInput.includes("como está o pc")) {
-        command = { action: "show_system_stats", params: {} };
-      } else if (lowerInput.includes("pesquise") || lowerInput.includes("procure por")) {
-        const query = input.replace(/pesquise|procure por|jarvis/gi, "").trim();
-        command = { action: "search_web", params: { query } };
+      let intent: 'chat' | 'automation' | 'search' | 'system' = 'chat';
+      if (command) {
+        intent = command.action === 'search_web' ? 'search' : 'automation';
       }
 
-      return { text: text || "Resposta vazia recebida.", command };
+      return { 
+        text: text.replace(/\[EXECUTE:.*\]/g, '').trim(), 
+        command,
+        intent 
+      };
     } catch (error: any) {
       console.error("Jarvis Brain Error:", error);
-      const errorMsg = error?.message || "Erro desconhecido";
-      return { text: `Senhor, detectei uma falha nos meus sistemas neurais. Identificador: ${errorMsg}` };
+      return { 
+        text: `Senhor, houve um erro no processador neural. Detalhe: ${error.message || 'Desconhecido'}`, 
+        intent: 'system' 
+      };
     }
+  }
+
+  private extractCommand(text: string) {
+    const match = text.match(/\[EXECUTE:\s*(\w+)\((.*)\)\]/);
+    if (match) {
+      const action = match[1];
+      const paramsStr = match[2];
+      try {
+        // Simple attempt to parse common patterns
+        const params: any = {};
+        if (action === 'open_app' || action === 'search_web' || action === 'type_text') {
+           params.query = paramsStr.replace(/['"]/g, '');
+        }
+        return { action, params };
+      } catch (e) {
+        return { action, params: { raw: paramsStr } };
+      }
+    }
+    return undefined;
   }
 }

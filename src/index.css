@@ -1,65 +1,52 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@200;400;600&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-display: "Orbitron", sans-serif;
 
-  --color-jarvis-blue: #00e5ff;
-  --color-jarvis-dark: #0a0c10;
-  --color-jarvis-card: #151921;
-  --color-jarvis-glow: rgba(0, 229, 255, 0.3);
+  --color-jarvis-slate: #0a0b0d;
+  --color-jarvis-carbon: #14161a;
+  --color-jarvis-graphite: #1c1f26;
+  --color-jarvis-accent: #00d4ff;
+  --color-jarvis-accent-dim: rgba(0, 212, 255, 0.15);
+  --color-jarvis-glass: rgba(20, 22, 26, 0.7);
 }
 
 @layer base {
   body {
-    @apply bg-jarvis-dark text-white font-sans overflow-hidden;
+    @apply bg-jarvis-slate text-white/90 font-sans antialiased overflow-hidden selection:bg-jarvis-accent/30;
   }
 }
 
 @layer components {
-  .hud-border {
-    @apply border border-jarvis-blue/20 backdrop-blur-md bg-jarvis-card/40;
-  }
-  
-  .glow-text {
-    text-shadow: 0 0 10px var(--color-jarvis-glow);
+  .premium-card {
+    @apply bg-jarvis-carbon border border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-md rounded-xl overflow-hidden;
   }
 
-  .scanline {
-    width: 100%;
-    height: 100px;
-    z-index: 99;
-    background: linear-gradient(0deg, rgba(0, 229, 255, 0) 0%, rgba(0, 229, 255, 0.05) 50%, rgba(0, 229, 255, 0) 100%);
-    opacity: 0.1;
-    position: absolute;
-    bottom: 100%;
-    animation: scanline 8s linear infinite;
+  .glow-cyan {
+    @apply shadow-[0_0_20px_var(--color-jarvis-accent-dim)];
   }
 
-  @keyframes scanline {
-    0% { bottom: 100%; }
-    100% { bottom: -100px; }
+  .technical-label {
+    @apply font-mono text-[9px] tracking-[0.2em] uppercase text-white/30;
   }
 
-  @keyframes spin-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  /* Scanline sutil - Cinematic */
+  .scanline-overlay {
+    @apply fixed inset-0 pointer-events-none z-50;
+    background: linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(0, 212, 255, 0.012) 50%
+    );
+    background-size: 100% 4px;
   }
 
-  .animate-spin-slow {
-    animation: spin-slow 8s linear infinite;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(0, 229, 255, 0.2);
-    border-radius: 10px;
+  /* Dust effect / Grain */
+  .noise-overlay {
+    @apply fixed inset-0 pointer-events-none z-40 opacity-10;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3％3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   }
 }

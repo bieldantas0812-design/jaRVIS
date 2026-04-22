@@ -1,34 +1,56 @@
 export class VoiceEngine {
+  private synth: SpeechSynthesis;
   private recognition: any;
-  private synthesis: SpeechSynthesis;
   private voices: SpeechSynthesisVoice[] = [];
 
   constructor() {
-    this.synthesis = window.speechSynthesis;
+    this.synth = window.speechSynthesis;
     this.setupRecognition();
     this.loadVoices();
   }
 
-  private setupRecognition() {
-    if ('webkitSpeechRecognition' in window) {
-      // @ts-ignore
-      this.recognition = new webkitSpeechRecognition();
-      this.recognition.continuous = false;
-      this.recognition.interimResults = true;
-      this.recognition.lang = 'pt-BR';
-    } else {
-      console.warn("Reconhecimento de voz não suportado neste navegador.");
+  private loadVoices() {
+    const loader = () => {
+      this.voices = this.synth.getVoices();
+    };
+    loader();
+    if (this.synth.onvoiceschanged !== undefined) {
+      this.synth.onvoiceschanged = loader;
     }
   }
 
-  private loadVoices() {
-    this.voices = this.synthesis.getVoices();
-    this.synthesis.onvoiceschanged = () => {
-      this.voices = this.synthesis.getVoices();
-    };
+  private setupRecognition() {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn("Speech Recognition not supported in this browser.");
+      return;
+    }
+    this.recognition = new SpeechRecognition();
+    this.recognition.continuous = false;
+    this.recognition.interimResults = true;
+    this.recognition.lang = 'pt-BR';
   }
 
-  public listen(onResult: (text: string, isFinal: boolean) => void, onEnd: () => void) {
+  speak(text: string, onEnd?: () => void) {
+    // Interrompe fala anterior para reduzir latência de resposta
+    this.synth.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    // Configurações para voz premium e rápida
+    utterance.rate = 1.2; 
+    utterance.pitch = 0.95;
+    
+    // Tenta encontrar uma voz masculina/soberba em PT-BK
+    const ptVoice = this.voices.find(v => v.lang.includes('pt-BR') && (v.name.includes('Daniel') || v.name.includes('Male')));
+    if (ptVoice) utterance.voice = ptVoice;
+
+    utterance.onend = () => {
+      if (onEnd) onEnd();
+    };
+    this.synth.speak(utterance);
+  }
+
+  listen(onResult: (text: string, isFinal: boolean) => void, onEnd: () => void) {
     if (!this.recognition) return;
 
     this.recognition.onresult = (event: any) => {
@@ -42,15 +64,11 @@ export class VoiceEngine {
           interimTranscript += event.results[i][0].transcript;
         }
       }
-
       onResult(finalTranscript || interimTranscript, finalTranscript !== '');
     };
 
     this.recognition.onerror = (event: any) => {
-      console.error("Erro no reconhecimento de voz:", event.error);
-      if (event.error === 'not-allowed') {
-        alert("Microfone bloqueado. Por favor, permita o acesso nas configurações do navegador.");
-      }
+      console.error("Speech Recognition Error:", event.error);
       onEnd();
     };
 
@@ -58,26 +76,9 @@ export class VoiceEngine {
     this.recognition.start();
   }
 
-  public stopListening() {
-    if (this.recognition) this.recognition.stop();
-  }
-
-  public speak(text: string, onEnd?: () => void) {
-    // Cancel current speaking
-    this.synthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'pt-BR';
-    
-    // Attempt to find a "natural" male voice if possible, else default
-    const preferredVoice = this.voices.find(v => (v.name.includes('Daniel') || v.name.includes('Google')) && v.lang.startsWith('pt'));
-    if (preferredVoice) utterance.voice = preferredVoice;
-    
-    utterance.rate = 1.05; // Slightly faster for that JARVIS efficiency
-    utterance.pitch = 0.95; // Slightly deeper
-
-    if (onEnd) utterance.onend = onEnd;
-    
-    this.synthesis.speak(utterance);
+  stopListening() {
+    if (this.recognition) {
+      this.recognition.stop();
+    }
   }
 }
