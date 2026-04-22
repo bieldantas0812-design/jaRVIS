@@ -17,7 +17,7 @@ export class JarvisBrain {
   private model: any;
   private chat: any;
 
-  constructor(apiKey: string) {
+  constructor(apiKey?: string) {
     if (apiKey && apiKey.length > 10) {
       this.genAI = new GoogleGenAI(apiKey);
       this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -25,6 +25,8 @@ export class JarvisBrain {
         history: [],
         generationConfig: { temperature: 0.4, maxOutputTokens: 250 }
       });
+    } else {
+      console.log("[JARVIS_BRAIN] Inicializado em modo restrito (Sem Gemini Key)");
     }
   }
 

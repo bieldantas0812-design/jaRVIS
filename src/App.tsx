@@ -34,22 +34,25 @@ export default function App() {
     setLogs(prev => [msg, ...prev].slice(0, 50));
   }, []);
 
-  const initBrain = useCallback((key: string) => {
-    if (key && key.trim().length > 10) {
-      try {
-        brainTargetRef.current = new JarvisBrain(key);
+  const initBrain = useCallback((key?: string) => {
+    try {
+      brainTargetRef.current = new JarvisBrain(key);
+      if (key && key.length > 10) {
         addLog("NÚCLEO NEURAL SINCRONIZADO");
-      } catch (e) {
-        console.error("Brain initialization failed", e);
-        addLog("ERRO NA SINCRONIZAÇÃO NEURAL");
+      } else {
+        addLog("NÚCLEO INICIALIZADO (MODO LOCAL)");
       }
+    } catch (e) {
+      console.error("Brain initialization failed", e);
+      addLog("ERRO NA SINCRONIZAÇÃO NEURAL");
     }
   }, [addLog]);
 
   useEffect(() => {
     if (!voiceTargetRef.current) voiceTargetRef.current = new VoiceEngine();
-    // Only auto-init if we have a key that looks like a real API key
-    if (localApiKey && localApiKey.length > 10 && !brainTargetRef.current) {
+    
+    // Inicializa o cérebro se ainda não existir
+    if (!brainTargetRef.current) {
       initBrain(localApiKey);
     }
   }, [localApiKey, initBrain]);
