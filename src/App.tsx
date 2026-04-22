@@ -34,15 +34,21 @@ export default function App() {
   }, []);
 
   const initBrain = useCallback((key: string) => {
-    if (key) {
-      brainTargetRef.current = new JarvisBrain(key);
-      addLog("NÚCLEO NEURAL SINCRONIZADO");
+    if (key && key.trim().length > 10) {
+      try {
+        brainTargetRef.current = new JarvisBrain(key);
+        addLog("NÚCLEO NEURAL SINCRONIZADO");
+      } catch (e) {
+        console.error("Brain initialization failed", e);
+        addLog("ERRO NA SINCRONIZAÇÃO NEURAL");
+      }
     }
   }, [addLog]);
 
   useEffect(() => {
     if (!voiceTargetRef.current) voiceTargetRef.current = new VoiceEngine();
-    if (localApiKey && !brainTargetRef.current) {
+    // Only auto-init if we have a key that looks like a real API key
+    if (localApiKey && localApiKey.length > 10 && !brainTargetRef.current) {
       initBrain(localApiKey);
     }
   }, [localApiKey, initBrain]);

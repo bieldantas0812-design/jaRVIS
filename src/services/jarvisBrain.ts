@@ -15,6 +15,10 @@ export class JarvisBrain {
   private chat: any;
 
   constructor(apiKey: string) {
+    if (!apiKey || apiKey.trim() === "") {
+      throw new Error("API Key is required for JarvisBrain");
+    }
+    
     this.genAI = new GoogleGenAI(apiKey);
     this.model = this.genAI.getGenerativeModel({ 
       model: "gemini-2.0-flash",
