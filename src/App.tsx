@@ -164,9 +164,11 @@ export default function App() {
       voiceTargetRef.current?.speak(personalizedText, () => {
         setIsSpeaking(false);
       });
-    } catch (error) {
+    } catch (error: any) {
       setIsThinking(false);
-      addLog("!!! FALHA CRÍTICA NO PROCESSADOR");
+      console.error("Critical Brain Failure:", error);
+      const msg = error?.message || "ERRO DESCONHECIDO";
+      addLog(`!!! FALHA NO PROCESSADOR: ${msg.toUpperCase()}`);
     }
   };
 

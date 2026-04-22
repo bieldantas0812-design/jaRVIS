@@ -68,16 +68,31 @@ export class JarvisBrain {
     }
   }
 
-  private processLocal(input: string, model: string = 'gemma3:4b'): Promise<JarvisResponse> {
-    // Lógica Ollama otimizada
-    return fetch("/api/ollama", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: input, model })
-    }).then(res => res.json()).then(data => ({
-      text: data.text,
-      intent: 'chat' as const
-    }));
+  private async processLocal(input: string, model: string = 'gemma3:4b'): Promise<JarvisResponse> {
+    try {
+      const res = await fetch("/api/ollama", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: input, model })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+      
+      const data = await res.json();
+      const action = this.extractAction(data.text);
+      
+      return {
+        text: data.text,
+        action: action,
+        intent: action ? 'automation' : 'chat'
+      };
+    } catch (error: any) {
+      console.error("[LOCAL_PROCESS] Fault:", error);
+      throw new Error(`Conexão Ollama: ${error.message}`);
+    }
   }
 
   private extractAction(text: string): JarvisAction | undefined {
