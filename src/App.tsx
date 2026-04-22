@@ -124,11 +124,14 @@ export default function App() {
   }, [fetchStats]);
 
   const handleBrainResponse = async (input: string) => {
+    // Garantia de Inicialização (Protocolo de Redundância)
     if (!brainTargetRef.current) {
-        if (aiMode === 'gemini' && !localApiKey) {
-            addLog("ERRO: CHAVE API AUSENTE");
-            return;
-        }
+        initBrain(localApiKey);
+    }
+
+    if (!brainTargetRef.current) {
+        addLog("!!! ERRO CRÍTICO: NÚCLEO INDISPONÍVEL");
+        return;
     }
     
     addLog(`> AUDIO_IN: "${input}"`);
@@ -180,6 +183,9 @@ export default function App() {
       voiceTargetRef.current?.stopListening();
       setIsListening(false);
     } else {
+      // Verifica se o cérebro existe antes de deixar ouvir
+      if (!brainTargetRef.current) initBrain(localApiKey);
+      
       setTranscript("");
       voiceTargetRef.current?.listen(
         (text, isFinal) => {
